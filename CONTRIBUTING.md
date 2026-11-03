@@ -44,12 +44,12 @@ Ensuite :
 
 ## 3. Les règles d'or
 
-1. **On ne travaille jamais directement sur `main`.** Une branche par tâche.
+1. **On ne travaille jamais directement sur `main`.** Une branche par tâche. GitHub l'impose : `main` est protégée et refuse tout push direct (voir section 7 si ça t'arrive).
 2. **On ne modifie pas la scène principale** (`MainScene`). Chacun travaille dans **sa propre scène de test** et livre son travail sous forme de **prefabs**. Seul le gestionnaire de projet intègre dans la scène principale.
 3. **On fait `git pull` avant de commencer à travailler.**
 4. **On sauvegarde dans Unity avant de commit** (`Ctrl+S` + `File > Save Project`).
 5. **Chaque fichier a son `.meta`** : on les commit toujours ensemble.
-6. **Jamais de `git push --force`.**
+6. **Jamais de `git push --force`.** GitHub le bloque aussi sur `main`.
 7. **Jamais supprimer son dossier et re-cloner** sans avoir poussé son travail (tout ce qui n'est pas poussé est perdu).
 8. **Petits commits, souvent.** Un commit = une chose identifiable.
 
@@ -86,7 +86,7 @@ git push                                     # les suivants
 
 1. Pousse ta branche.
 2. Sur GitHub : **Pull request** vers `main`, lie l'issue (`Closes #12`).
-3. Le gestionnaire de projet (ou un autre membre) relit et fusionne.
+3. Le gestionnaire de projet (ou un autre membre) relit et fusionne avec le bouton **Merge pull request**.
 4. Après la fusion :
 
 ```bash
@@ -94,6 +94,10 @@ git switch main
 git pull
 git branch -d feature/nom-de-la-tache
 ```
+
+### Modifier un fichier directement sur le site GitHub
+
+C'est pratique pour un petit changement (README, trace de réunion). Au moment de cliquer sur **Commit changes**, choisis **Create a new branch for this commit and start a pull request**, puis fusionne la pull request. L'option « Commit directly to main » sera refusée.
 
 ---
 
@@ -137,6 +141,18 @@ git merge main
 | J'ai ajouté un fichier par erreur avec `git add` | `git restore --staged chemin/du/fichier` |
 | Un merge tourne mal, je veux revenir en arrière | `git merge --abort` |
 | Je veux voir l'historique | `git log --oneline --graph` |
+
+### J'ai commit sur `main` par erreur et le push est refusé
+
+Pas de panique : ton travail n'est pas perdu. Déplace tes commits sur une nouvelle branche :
+
+```bash
+git switch -c feature/ma-tache        # crée une branche qui emporte tes commits
+git branch -f main origin/main        # remet ton main local comme celui de GitHub
+git push -u origin feature/ma-tache   # pousse ta branche
+```
+
+Puis ouvre une pull request comme d'habitude.
 
 ### Conflit sur un fichier Unity (`.unity`, `.prefab`, `.asset`)
 
