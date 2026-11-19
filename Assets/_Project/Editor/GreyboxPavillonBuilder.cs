@@ -149,6 +149,9 @@ public static class GreyboxPavillonBuilder
         var portes = Group("Portes", hall, Vector3.zero);
         foreach (var p in Portes)
             DoorOpening(portes, Y_RDC, HallH, p.angle, p.lettre, p.lettre == "A", true);
+        var ailes = Group("Ailes", hall, Vector3.zero);
+        foreach (var p in Portes)
+            if (p.lettre != "A") Aile(ailes, Y_RDC, HallH, p.angle, p.lettre); // l'aile A est le vrai corridor
 
         BuildVestibule(hall, plafonds);
 
@@ -203,8 +206,15 @@ public static class GreyboxPavillonBuilder
                 rot: Quaternion.LookRotation(d));
         }
         Vector3 dF = Dir(203f);
-        Box("Fontaine_Eau", mob, dF * 8.7f + Vector3.up * 0.5f, new Vector3(0.45f, 1.0f, 0.35f), Metal,
-            rot: Quaternion.LookRotation(dF));
+        // Fontaine d'eau murale : plaque contre le mur, bac en inox à 0,9 m, bouton et bec
+        var fo = Group("Fontaine_Eau", mob, dF * (HallR - 0.1f));
+        fo.localRotation = Quaternion.LookRotation(-dF); // z local = vers le centre du hall
+        Box("Plaque_Murale", fo, new Vector3(0f, 0.75f, 0.02f), new Vector3(0.45f, 0.7f, 0.03f), Metal, collider: false);
+        Box("Bac", fo, new Vector3(0f, 0.86f, 0.2f), new Vector3(0.42f, 0.1f, 0.34f), Metal);
+        Box("Cuvette", fo, new Vector3(0f, 0.912f, 0.2f), new Vector3(0.34f, 0.005f, 0.26f), GrisPanneau, collider: false);
+        Box("Bec", fo, new Vector3(0.1f, 0.95f, 0.12f), new Vector3(0.03f, 0.05f, 0.03f), Metal, collider: false);
+        Box("Bouton", fo, new Vector3(0f, 0.86f, 0.375f), new Vector3(0.08f, 0.05f, 0.01f), Noir, collider: false);
+        Box("Habillage_Bas", fo, new Vector3(0f, 0.6f, 0.12f), new Vector3(0.3f, 0.4f, 0.2f), Metal, collider: false);
 
         // Points pour l'équipe (objets vides)
         var pts = Group("Points", hall, Vector3.zero);
@@ -258,6 +268,8 @@ public static class GreyboxPavillonBuilder
         WallsRound(Group("Murs", etage, Vector3.zero), Y_Etage, HallH, PortesSegments(), MurHall);
         var pE = Group("Portes", etage, Vector3.zero);
         foreach (var p in Portes) DoorOpening(pE, Y_Etage, HallH, p.angle, p.lettre, false, false);
+        var ailesE = Group("Ailes", etage, Vector3.zero);
+        foreach (var p in Portes) Aile(ailesE, Y_Etage, HallH, p.angle, p.lettre);
         RailRound(Group("Balcon_Vitre", etage, Vector3.zero), Y_Etage, OculusR, false, Seg(AngleHautEscalier()));
         Ring("Plafond_Etage", etage, Y_Etage + HallH + 0.15f, 0f, HallR + 0.05f, 0.3f, Platre, false);
         // Enseigne visible depuis l'entrée, sur le bord du balcon (côté sud)
@@ -512,9 +524,35 @@ public static class GreyboxPavillonBuilder
         var ext = Group("Exterieur", root, Vector3.zero);
         var herbe = Mat("Exterieur_Herbe", new Color(0.33f, 0.40f, 0.24f), 0.1f);
         var trottoir = Mat("Exterieur_Trottoir", new Color(0.55f, 0.55f, 0.53f), 0.2f);
+
+        // Terrain tout autour du pavillon (en morceaux, pour ne pas couvrir le puits du hall)
         Box("Trottoir_Entree", ext, new Vector3(0f, -0.08f, 15f), new Vector3(12f, 0.1f, 6f), trottoir);
         Box("Herbe_Nord", ext, new Vector3(6f, -0.12f, 30f), new Vector3(60f, 0.1f, 24f), herbe, collider: false);
         Box("Herbe_Labo", ext, new Vector3(20f, -0.12f, 14f), new Vector3(20f, 0.1f, 8f), herbe, collider: false);
+        Box("Herbe_Sud", ext, new Vector3(10f, -0.12f, -24.75f), new Vector3(80f, 0.1f, 30.5f), herbe, collider: false);
+        Box("Herbe_Est", ext, new Vector3(37.1f, -0.12f, 10.25f), new Vector3(25.8f, 0.1f, 39.5f), herbe, collider: false);
+        Box("Herbe_Ouest", ext, new Vector3(-24.75f, -0.12f, 4.25f), new Vector3(30.5f, 0.1f, 27.5f), herbe, collider: false);
+        // Herbe près du hall (cachée dans les planchers ; on laisse libre le puits central)
+        Box("Herbe_Hall_Ouest", ext, new Vector3(-6.35f, -0.12f, 4.25f), new Vector3(6.3f, 0.1f, 27.5f), herbe, collider: false);
+        Box("Herbe_Hall_Est",   ext, new Vector3( 7.6f, -0.12f, 4.25f), new Vector3(8.8f, 0.1f, 27.5f), herbe, collider: false);
+        Box("Herbe_Hall_Sud",   ext, new Vector3( 0f,   -0.12f, -6.35f), new Vector3(6.4f, 0.1f, 6.3f), herbe, collider: false);
+        Box("Herbe_Hall_Nord",  ext, new Vector3( 0f,   -0.12f, 7.6f),  new Vector3(6.4f, 0.1f, 8.8f), herbe, collider: false);
+        Box("Herbe_Entree_Cotes", ext, new Vector3(0f, -0.12f, 15f), new Vector3(19f, 0.1f, 6f), herbe, collider: false);
+
+        // Derrière la porte de secours : palier en béton, allée, herbe praticable et point de rassemblement
+        var sortie = Group("Sortie_Secours", ext, Vector3.zero);
+        Box("Herbe_Sortie", sortie, new Vector3(16.85f, -0.12f, -5.4f), new Vector3(14.7f, 0.1f, 8.2f), herbe);
+        Box("Palier_Beton", sortie, new Vector3(23f, -0.05f, -2.9f), new Vector3(3f, 0.1f, 3.2f), trottoir);
+        Box("Allee", sortie, new Vector3(23f, -0.06f, -7f), new Vector3(1.6f, 0.1f, 5f), trottoir);
+        var poteau = Mat("Poteau_Lampadaire", new Color(0.18f, 0.18f, 0.20f), 0.5f);
+        Box("Lampadaire_Poteau", sortie, new Vector3(25f, 1.75f, -4f), new Vector3(0.1f, 3.5f, 0.1f), poteau);
+        Box("Lampadaire_Tete", sortie, new Vector3(24.8f, 3.5f, -4f), new Vector3(0.5f, 0.12f, 0.25f),
+            EmissiveMat("Lampe", new Color(1f, 0.97f, 0.9f), 1.5f), collider: false);
+        // Panneau vert « Point de rassemblement » : le but du joueur une fois dehors
+        var vert = Mat("Panneau_Vert", new Color(0.05f, 0.45f, 0.20f), 0.4f);
+        Box("Panneau_Poteau", sortie, new Vector3(23f, 0.9f, -9.4f), new Vector3(0.06f, 1.8f, 0.06f), Metal);
+        Sign("Panneau_Rassemblement", sortie, "POINT DE\nRASSEMBLEMENT", new Vector3(23f, 1.95f, -9.36f),
+             Quaternion.LookRotation(Vector3.back), new Vector2(0.8f, 0.45f), Color.white, vert);
     }
 
     // ------------------------------------------------------------------ ÉLÉMENTS RÉUTILISÉS
@@ -570,6 +608,23 @@ public static class GreyboxPavillonBuilder
 
         Box("Plaque", e, new Vector3(0f, PorteH + 0.55f, -0.115f), new Vector3(0.45f, 0.38f, 0.02f), Cadre, collider: false);
         Sign("Lettre", e, lettre, new Vector3(0f, PorteH + 0.55f, -0.13f), Quaternion.identity, new Vector2(0.36f, 0.32f), Color.white, null);
+    }
+
+    // Aile du bâtiment derrière une porte du hall : un corridor fermé de 7 m (sol, murs, toit, mur du bout).
+    // On ne peut pas y entrer (porte fermée), mais de l'extérieur le pavillon a ses vraies ailes.
+    static void Aile(Transform parent, float y0, float h, float angle, string lettre)
+    {
+        const float L = 7f, W = 2.8f;
+        Vector3 dir = Dir(angle);
+        var a = Group($"Aile_{lettre}", parent, dir * HallR + Vector3.up * y0);
+        a.localRotation = Quaternion.LookRotation(dir); // z local = vers l'extérieur
+        Box("Sol", a, new Vector3(0f, -Dalle / 2f, L / 2f + 0.1f), new Vector3(W, Dalle, L), Terrazzo, collider: false);
+        Box("Mur_G", a, new Vector3(-W / 2f + 0.1f, h / 2f, L / 2f + 0.1f), new Vector3(0.2f, h, L), MurHall, collider: false);
+        Box("Mur_D", a, new Vector3( W / 2f - 0.1f, h / 2f, L / 2f + 0.1f), new Vector3(0.2f, h, L), MurHall, collider: false);
+        Box("Mur_Bout", a, new Vector3(0f, h / 2f, L + 0.2f), new Vector3(W, h, 0.2f), MurHall, collider: false);
+        Box("Toit", a, new Vector3(0f, h + 0.15f, L / 2f + 0.1f), new Vector3(W, 0.3f, L + 0.2f), Platre, collider: false);
+        // Une fenêtre au bout de l'aile, vue de l'extérieur
+        Box("Fenetre_Bout", a, new Vector3(0f, h * 0.55f, L + 0.31f), new Vector3(1.2f, 1.0f, 0.02f), Verre, collider: false);
     }
 
     // Double porte coupe-feu fermée (décor) : battants, fenêtres grillagées, barres anti-panique
@@ -664,12 +719,16 @@ public static class GreyboxPavillonBuilder
     {
         Vector3 dir = Dir(angle);
         var g = Group(name, parent, dir * r + Vector3.up * y0);
-        g.localRotation = Quaternion.LookRotation(-dir); // tourné vers le centre du hall
+        g.localRotation = Quaternion.LookRotation(-dir); // z local = vers le centre du hall (là où l'on regarde assis)
         var tissu = Mat("Fauteuil_Rouge", new Color(0.62f, 0.10f, 0.10f), 0.2f);
-        Box("Assise", g, new Vector3(0f, 0.22f, 0f), new Vector3(1.4f, 0.44f, 0.75f), tissu);
-        Box("Dossier", g, new Vector3(0f, 0.55f, 0.3f), new Vector3(1.4f, 0.5f, 0.15f), tissu, collider: false);
-        Box("Accoudoir_G", g, new Vector3(-0.66f, 0.4f, 0f), new Vector3(0.1f, 0.3f, 0.75f), tissu, collider: false);
-        Box("Accoudoir_D", g, new Vector3(0.66f, 0.4f, 0f), new Vector3(0.1f, 0.3f, 0.75f), tissu, collider: false);
+        // Banquette 2 places : pieds, assise, dossier contre le mur (côté -z), accoudoirs
+        foreach (float px in new[] { -0.62f, 0.62f })
+            foreach (float pz in new[] { -0.28f, 0.28f })
+                Box("Pied", g, new Vector3(px, 0.06f, pz), new Vector3(0.05f, 0.12f, 0.05f), Metal, collider: false);
+        Box("Assise", g, new Vector3(0f, 0.27f, 0.05f), new Vector3(1.4f, 0.3f, 0.65f), tissu);
+        Box("Dossier", g, new Vector3(0f, 0.62f, -0.3f), new Vector3(1.4f, 0.55f, 0.15f), tissu, collider: false);
+        Box("Accoudoir_G", g, new Vector3(-0.66f, 0.5f, 0f), new Vector3(0.1f, 0.2f, 0.7f), tissu, collider: false);
+        Box("Accoudoir_D", g, new Vector3( 0.66f, 0.5f, 0f), new Vector3(0.1f, 0.2f, 0.7f), tissu, collider: false);
     }
 
     // Gicleurs et détecteurs de fumée en ligne, grilles de ventilation
@@ -867,6 +926,11 @@ public static class GreyboxPavillonBuilder
         soS.FindProperty("voile").objectReferenceValue = voileR;
         soS.FindProperty("sonDecontamination").objectReferenceValue = sonDeco;
         soS.ApplyModifiedPropertiesWithoutUndo();
+
+        // Outil de test (éditeur et builds de développement seulement) : touche O = ouvrir toutes les portes
+        var outil = new GameObject("Outil_Test_Portes");
+        outil.transform.SetParent(sys, false);
+        outil.AddComponent<OutilTestPortes>();
 
         // Pour l'équipe : SequenceAmbiance.OnConfinement (départ du minuteur), SequenceAmbiance.Decontamination() (échec),
         // PorteSortie.OnOpened (victoire), AlarmeController.FinProche() / Victoire().
