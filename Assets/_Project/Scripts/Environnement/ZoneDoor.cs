@@ -1,6 +1,7 @@
 // ZoneDoor.cs
 // Rôle : environnement et systèmes (Brunel)
-// Porte coulissante (double ou simple) qui sépare deux zones de l'escape room.
+// Porte battante (double ou simple, comme une vraie porte coupe-feu) qui sépare deux zones de l'escape room.
+// Chaque battant peut pivoter (rotations) et/ou glisser (deplacements).
 //   - Verrouillée au départ : voyant rouge, les battants bloquent le passage et la téléportation.
 //   - Open() : appelée par l'énigme de la zone (événement OnSolved de Jolin). Son + glissement + voyant vert.
 //   - ResetDoor() : revient à l'état verrouillé (nouvelle partie).
@@ -19,6 +20,8 @@ public class ZoneDoor : MonoBehaviour
     [SerializeField] Transform[] battants;
     [Tooltip("Déplacement local de chaque battant à l'ouverture (même ordre que la liste des battants).")]
     [SerializeField] Vector3[] deplacements;
+    [Tooltip("Rotation locale de chaque battant à l'ouverture, en degrés (ex. : 0, -90, 0 pour pivoter sur ses charnières).")]
+    [SerializeField] Vector3[] rotations;
     [Tooltip("Durée de l'ouverture, en secondes.")]
     [SerializeField] float dureeOuverture = 1.2f;
 
@@ -43,6 +46,7 @@ public class ZoneDoor : MonoBehaviour
     public DoorState Etat { get; private set; } = DoorState.Verrouillee;
 
     Vector3[] positionsFermees;
+    Quaternion[] rotationsFermees;
     Coroutine animation;
     MaterialPropertyBlock bloc;
     static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -52,8 +56,12 @@ public class ZoneDoor : MonoBehaviour
     {
         // On retient la position fermée de chaque battant
         positionsFermees = new Vector3[battants.Length];
+        rotationsFermees = new Quaternion[battants.Length];
         for (int i = 0; i < battants.Length; i++)
+        {
             positionsFermees[i] = battants[i].localPosition;
+            rotationsFermees[i] = battants[i].localRotation;
+        }
 
         if (ouverteAuDepart) PlacerBattants(1f, DoorState.Ouverte);
         else PlacerBattants(0f, DoorState.Verrouillee);
@@ -110,8 +118,10 @@ public class ZoneDoor : MonoBehaviour
     {
         for (int i = 0; i < battants.Length; i++)
         {
-            Vector3 d = i < deplacements.Length ? deplacements[i] : Vector3.zero;
+            Vector3 d = deplacements != null && i < deplacements.Length ? deplacements[i] : Vector3.zero;
+            Vector3 r = rotations != null && i < rotations.Length ? rotations[i] : Vector3.zero;
             battants[i].localPosition = positionsFermees[i] + d * ouverture;
+            battants[i].localRotation = rotationsFermees[i] * Quaternion.Euler(r * ouverture);
         }
     }
 
