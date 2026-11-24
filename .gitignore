@@ -55,3 +55,4 @@ mono_crash.*
 Thumbs.db
 desktop.ini
 *.slnx
+/.utmp

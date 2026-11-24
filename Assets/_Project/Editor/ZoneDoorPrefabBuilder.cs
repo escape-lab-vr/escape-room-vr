@@ -1,6 +1,7 @@
 // ZoneDoorPrefabBuilder.cs
 // Rôle : environnement et systèmes (Brunel)
-// Crée les prefabs de porte dans Assets/_Project/Prefabs :
+// Crée les prefabs de porte dans Assets/_Project/Prefabs (portes battantes en bois, comme les vraies portes coupe-feu
+// du pavillon : cadre en acier, fenêtre étroite en verre armé, barre anti-panique, ferme-porte, plaques de protection) :
 //   - ZoneDoor_Double.prefab (1,8 m) : porte A, sortie de secours
 //   - ZoneDoor_Simple.prefab (0,9 m) : porte du labo A-111
 // Menu : Escape Lab > Créer les prefabs ZoneDoor
@@ -21,8 +22,8 @@ public static class ZoneDoorPrefabBuilder
         EnsureFolder("Assets/_Project", "Materials");
         EnsureFolder("Assets/_Project/Materials", "Portes");
 
-        var bois   = Mat("Porte_Bois",   new Color(0.62f, 0.44f, 0.26f), 0.3f, false);
-        var cadre  = Mat("Porte_Cadre",  new Color(0.25f, 0.15f, 0.10f), 0.3f, false);
+        var bois   = Mat("Porte_Bois",   new Color(0.78f, 0.56f, 0.32f), 0.35f, false);
+        var cadre  = Mat("Porte_Cadre",  new Color(0.22f, 0.23f, 0.24f), 0.5f, false);
         var metal  = Mat("Porte_Metal",  new Color(0.70f, 0.72f, 0.75f), 0.8f, false);
         var verre  = Mat("Porte_Hublot", new Color(0.65f, 0.80f, 0.90f), 0.9f, false);
         var voyant = Mat("Porte_Voyant", new Color(1f, 0.1f, 0.1f), 0.5f, true);
@@ -51,29 +52,50 @@ public static class ZoneDoorPrefabBuilder
         src.minDistance = 1f;
         src.maxDistance = 15f;
 
-        // Cadre (décor, sans collider : les murs de la greybox bloquent déjà les côtés)
-        Cube("Cadre_Haut",   root.transform, new Vector3(0f, height + 0.05f, 0f), new Vector3(width + 0.2f, 0.1f, 0.2f), cadre, false);
-        Cube("Cadre_Gauche", root.transform, new Vector3(-width / 2f - 0.05f, height / 2f, 0f), new Vector3(0.1f, height, 0.2f), cadre, false);
-        Cube("Cadre_Droit",  root.transform, new Vector3( width / 2f + 0.05f, height / 2f, 0f), new Vector3(0.1f, height, 0.2f), cadre, false);
+        // Cadre en acier (décor, sans collider : les murs de la greybox bloquent déjà les côtés)
+        Cube("Cadre_Haut",   root.transform, new Vector3(0f, height + 0.05f, 0f), new Vector3(width + 0.2f, 0.1f, 0.24f), cadre, false);
+        Cube("Cadre_Gauche", root.transform, new Vector3(-width / 2f - 0.05f, height / 2f, 0f), new Vector3(0.1f, height, 0.24f), cadre, false);
+        Cube("Cadre_Droit",  root.transform, new Vector3( width / 2f + 0.05f, height / 2f, 0f), new Vector3(0.1f, height, 0.24f), cadre, false);
+        Cube("Seuil", root.transform, new Vector3(0f, 0.005f, 0f), new Vector3(width, 0.01f, 0.2f), metal, false);
 
-        // Battants (avec collider : ils bloquent le joueur et le rayon de téléportation)
+        // Battants sur charnières : un pivot au bord de l'ouverture, le battant est son enfant.
+        // Ils pivotent vers +z (le côté opposé à l'arrivée), comme une vraie porte qu'on pousse.
         int n = isDouble ? 2 : 1;
         float w = width / n;
         var battants = new Transform[n];
-        var deplacements = new Vector3[n];
+        var rotations = new Vector3[n];
         for (int i = 0; i < n; i++)
         {
-            float x = isDouble ? (i == 0 ? -w / 2f : w / 2f) : 0f;
-            var b = Cube(isDouble ? (i == 0 ? "Battant_Gauche" : "Battant_Droit") : "Battant",
-                         root.transform, new Vector3(x, height / 2f, 0f), new Vector3(w - 0.02f, height, 0.06f), bois, true);
-            // Hublot et barre anti-panique, enfants du battant (ils glissent avec lui)
-            Cube("Hublot", b, new Vector3(0f, 0.18f, 0f), Inverse(new Vector3(0.25f, 0.5f, 0.07f), b.localScale), verre, false);
-            Cube("Barre",  b, new Vector3(0f, -0.05f, -0.6f), Inverse(new Vector3(w * 0.8f, 0.04f, 0.04f), b.localScale), metal, false);
-            battants[i] = b;
-            // Double : chaque battant glisse vers son côté. Simple : glisse vers la droite.
-            float dir = isDouble ? (i == 0 ? -1f : 1f) : 1f;
-            deplacements[i] = new Vector3(dir * (w + 0.05f), 0f, 0f);
+            bool gauche = !isDouble || i == 0;
+            float sx = gauche ? 1f : -1f;                 // direction du battant depuis sa charnière
+            var pivot = new GameObject(gauche ? "Pivot_Gauche" : "Pivot_Droit").transform;
+            pivot.SetParent(root.transform, false);
+            pivot.localPosition = new Vector3(gauche ? -width / 2f : width / 2f, 0f, 0f);
+            var b = new GameObject("Battant").transform;
+            b.SetParent(pivot, false);
+            b.localPosition = new Vector3(sx * w / 2f, 0f, 0f);
+            float lw = w - 0.01f;
+            Cube("Panneau", b, new Vector3(0f, height / 2f, 0f), new Vector3(lw, height - 0.01f, 0.045f), bois, true);
+            // Fenêtre étroite en verre armé, côté charnière
+            float fx = -sx * (lw / 2f - 0.2f);
+            Cube("Fenetre_Cadre", b, new Vector3(fx, 1.55f, 0f), new Vector3(0.16f, 0.66f, 0.05f), metal, false);
+            Cube("Fenetre", b, new Vector3(fx, 1.55f, 0f), new Vector3(0.12f, 0.6f, 0.052f), verre, false);
+            // Barre anti-panique côté arrivée (on pousse), poignée côté opposé
+            Cube("Barre", b, new Vector3(0f, 1.0f, -0.06f), new Vector3(lw * 0.75f, 0.05f, 0.04f), metal, false);
+            Cube("Barre_Support_A", b, new Vector3(-lw * 0.36f, 1.0f, -0.035f), new Vector3(0.05f, 0.1f, 0.03f), metal, false);
+            Cube("Barre_Support_B", b, new Vector3( lw * 0.36f, 1.0f, -0.035f), new Vector3(0.05f, 0.1f, 0.03f), metal, false);
+            Cube("Poignee", b, new Vector3(sx * (lw / 2f - 0.1f), 1.0f, 0.05f), new Vector3(0.03f, 0.3f, 0.03f), metal, false);
+            // Plaques de protection en bas, des deux côtés
+            Cube("Plaque_Bas_A", b, new Vector3(0f, 0.13f, -0.025f), new Vector3(lw - 0.05f, 0.25f, 0.004f), metal, false);
+            Cube("Plaque_Bas_B", b, new Vector3(0f, 0.13f,  0.025f), new Vector3(lw - 0.05f, 0.25f, 0.004f), metal, false);
+            // Charnières et ferme-porte
+            for (int h = 0; h < 3; h++)
+                Cube("Charniere", b, new Vector3(-sx * (lw / 2f), 0.25f + h * (height - 0.5f) / 2f, 0f), new Vector3(0.02f, 0.1f, 0.06f), metal, false);
+            Cube("Ferme_Porte", b, new Vector3(-sx * (lw / 2f - 0.2f), height - 0.12f, 0.06f), new Vector3(0.3f, 0.07f, 0.06f), cadre, false);
+            battants[i] = pivot;
+            rotations[i] = new Vector3(0f, gauche ? -88f : 88f, 0f);
         }
+        if (isDouble) Cube("Couvre_Joint", battants[1].GetChild(0), new Vector3(-w / 2f + 0.005f, height / 2f, -0.03f), new Vector3(0.03f, height - 0.02f, 0.01f), metal, false);
 
         // Voyant au-dessus de la porte, côté arrivée
         var v = Cube("Voyant", root.transform, new Vector3(0f, height + 0.25f, -0.12f), new Vector3(0.2f, 0.12f, 0.05f), voyantMat, false);
@@ -82,11 +104,12 @@ public static class ZoneDoorPrefabBuilder
         var so = new SerializedObject(door);
         var pb = so.FindProperty("battants");
         var pd = so.FindProperty("deplacements");
-        pb.arraySize = n; pd.arraySize = n;
+        var pr = so.FindProperty("rotations");
+        pb.arraySize = n; pd.arraySize = 0; pr.arraySize = n;
         for (int i = 0; i < n; i++)
         {
             pb.GetArrayElementAtIndex(i).objectReferenceValue = battants[i];
-            pd.GetArrayElementAtIndex(i).vector3Value = deplacements[i];
+            pr.GetArrayElementAtIndex(i).vector3Value = rotations[i];
         }
         so.FindProperty("voyant").objectReferenceValue = v.GetComponent<Renderer>();
         so.FindProperty("source").objectReferenceValue = src;
