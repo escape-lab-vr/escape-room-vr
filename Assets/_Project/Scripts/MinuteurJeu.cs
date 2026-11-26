@@ -57,6 +57,11 @@ public class MinuteurJeu : MonoBehaviour
         EstEnCours = false;
     }
 
+    public void DesactiverDemarrageAuto() // le minuteur attendra Demarrer() (appelée dans Awake par le GameManager)
+    {
+        demarrerAuLancement = false;
+    }
+
     private void AfficherTemps()
     {
         if (texteMinuteur == null)

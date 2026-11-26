@@ -2,7 +2,10 @@
 // Rôle : gestion de projet et intégration (Allan)
 // Chef d'orchestre de la partie : il relie les énigmes (Jolin), les portes et l'ambiance (Brunel)
 // et le minuteur (Sarata).
-//   - Démarrage    : le minuteur part au début de la partie, ou à l'entrée du labo (case à cocher).
+//   - Démarrage    : le minuteur part à l'entrée du labo, quand la fuite éclate (OnConfinement de Brunel).
+//                    Décocher « Start Timer On Lab Entry » pour le lancer dès le début de la partie.
+//   - Références   : si Timer, Ambiance, Alarm ou Exit Door sont vides (ex. : greybox reconstruite),
+//                    le GameManager les retrouve tout seul dans la scène.
 //   - Progression  : une énigme réussie appelle PuzzleSolved(numéro) -> la porte associée s'ouvre.
 //   - Fin proche   : pendant la dernière minute, l'alarme passe en mode « fin proche ».
 //   - Victoire     : le joueur atteint le point de rassemblement dehors (OnEvacuationReussie de Brunel)
@@ -45,7 +48,7 @@ public class GameManager : MonoBehaviour
     [Header("Minuteur (Sarata)")]
     [SerializeField] private MinuteurJeu timer;
     [Tooltip("Coché : le minuteur part à l'entrée du labo (OnConfinement). Décoché : dès le début de la partie.")]
-    [SerializeField] private bool startTimerOnLabEntry = false;
+    [SerializeField] private bool startTimerOnLabEntry = true;
     [Tooltip("Secondes restantes à partir desquelles l'alarme passe en « fin proche ».")]
     [SerializeField] private float finalMinuteThreshold = 60f;
 
@@ -68,7 +71,20 @@ public class GameManager : MonoBehaviour
 
     public GameState State { get; private set; } = GameState.Playing;
 
+    private const string ExitDoorName = "PorteSortie";
+
     private bool finalMinuteTriggered;
+
+    private void Awake() // retrouve les références manquantes et prépare le minuteur avant son Start()
+    {
+        FindMissingReferences();
+
+        // Le minuteur ne doit pas partir tout seul s'il attend l'entrée du labo
+        if (startTimerOnLabEntry && timer != null)
+        {
+            timer.DesactiverDemarrageAuto();
+        }
+    }
 
     private void Start() // prépare la partie et branche les événements des autres scripts
     {
@@ -225,6 +241,45 @@ public class GameManager : MonoBehaviour
         Debug.Log("GameManager : temps écoulé, partie perdue.");
     }
 
+    private void FindMissingReferences() // cherche dans la scène les objets non renseignés dans l'Inspector
+    {
+        if (timer == null)
+        {
+            timer = FindFirstObjectByType<MinuteurJeu>();
+        }
+
+        if (ambiance == null)
+        {
+            ambiance = FindFirstObjectByType<SequenceAmbiance>();
+        }
+
+        if (alarm == null)
+        {
+            alarm = FindFirstObjectByType<AlarmeController>();
+        }
+
+        if (exitDoor == null)
+        {
+            exitDoor = FindDoorByName(ExitDoorName);
+        }
+    }
+
+    private ZoneDoor FindDoorByName(string doorName) // trouve une porte précise parmi toutes les ZoneDoor de la scène
+    {
+        ZoneDoor[] doors = FindObjectsByType<ZoneDoor>(FindObjectsSortMode.None);
+
+        foreach (ZoneDoor door in doors)
+        {
+            if (door.name == doorName)
+            {
+                return door;
+            }
+        }
+
+        Debug.LogWarning($"GameManager : porte « {doorName} » introuvable dans la scène.");
+        return null;
+    }
+
     private bool HasEndTrigger() // vrai si la victoire est déclenchée par l'évacuation ou la porte de sortie
     {
         if (winOnEvacuation && ambiance != null)
@@ -294,6 +349,15 @@ public class GameManager : MonoBehaviour
                 PuzzleSolved(i);
                 return;
             }
+        }
+    }
+
+    [ContextMenu("Test : entrée du labo")]
+    private void EnterLabForTest() // simule l'entrée du joueur dans le labo (fuite + départ du minuteur)
+    {
+        if (ambiance != null)
+        {
+            ambiance.EntreeLabo();
         }
     }
 

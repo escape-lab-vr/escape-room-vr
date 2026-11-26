@@ -32088,7 +32088,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   puzzles: []
   timer: {fileID: 604158460}
-  startTimerOnLabEntry: 0
+  startTimerOnLabEntry: 1
   finalMinuteThreshold: 60
   ambiance: {fileID: 857800411}
   alarm: {fileID: 1699771215}
